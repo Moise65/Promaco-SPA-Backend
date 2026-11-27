@@ -4,9 +4,9 @@ Backend de la tienda Promaco SpA: **API REST con Spring Boot 3.5**, base de dato
 
 | | |
 |---|---|
-| API | `http://localhost:8080/api` (o `http://IP_PUBLICA_EC2:8080/api`) |
-| Swagger | `http://localhost:8080/swagger-ui/index.html` |
-| OpenAPI | `http://localhost:8080/v3/api-docs` |
+| API | `http://localhost:8080/api` (o `http://98.89.130.7:8080/api`) |
+| Swagger | `http://localhost:8080/swagger-ui/index.html` (o `http://98.89.130.7:8080/swagger-ui/index.html`) |
+| OpenAPI | `http://localhost:8080/v3/api-docs` (o `http://98.89.130.7:8080/v3/api-docs`) |
 
 ## Tecnologías
 
@@ -95,8 +95,8 @@ Sin token en una ruta protegida → **401**. Con token pero sin el rol → **403
 Requisitos: **JDK 17**.
 
 ```bash
-# Opción A: con PostgreSQL de la EC2 (cambia la IP)
-./mvnw spring-boot:run -Dspring-boot.run.arguments="--spring.datasource.url=jdbc:postgresql://IP_PUBLICA_EC2:5432/promaco_db"
+# Opción A: la API ya está desplegada en EC2 → http://98.89.130.7:8080/api
+#           (PostgreSQL solo acepta conexiones locales dentro de la instancia, por seguridad)
 
 # Opción B (respaldo, sin internet): base H2 guardada en la carpeta ./data
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
@@ -134,8 +134,8 @@ cd ~
 ### 3. Descargar, compilar y ejecutar la API
 
 ```bash
-git clone https://github.com/USUARIO/REPOSITORIO-BACKEND.git
-cd REPOSITORIO-BACKEND
+git clone https://github.com/Moise65/Promaco-SPA-Backend
+cd Promaco-SPA-Backend
 chmod +x mvnw
 ./mvnw clean package -DskipTests
 export DB_URL=jdbc:postgresql://localhost:5432/promaco_db
@@ -151,13 +151,47 @@ tail -f api.log          # espera "Started PromacoBackendApplication" y sal con 
 curl http://localhost:8080/api/categorias
 ```
 
-Desde tu PC: `http://IP_PUBLICA_EC2:8080/swagger-ui/index.html`
+Desde tu PC: `http://98.89.130.7:8080/swagger-ui/index.html`
 
-En el frontend, el archivo `.env` queda así: `VITE_API_URL=http://IP_PUBLICA_EC2:8080/api`
+En el frontend, el archivo `.env` queda así: `VITE_API_URL=http://98.89.130.7:8080/api`
 
 > **Ojo con AWS Academy:** al reiniciar el laboratorio la **IP pública cambia**. Actualiza el `.env` del frontend, o asocia una **Elastic IP** a la instancia para que no cambie.
 > Si publicas el frontend con Nginx en la misma EC2, agrega su origen a CORS antes de iniciar la API:
-> `export CORS_ORIGINS=http://localhost:5173,http://IP_PUBLICA_EC2`
+> `export CORS_ORIGINS=http://localhost:5173,http://98.89.130.7`
+
+
+## Probar la seguridad JWT (despliegue en EC2)
+
+Swagger: http://98.89.130.7:8080/swagger-ui/index.html
+
+| Prueba | Usuario | Resultado esperado |
+|---|---|---|
+| `GET /api/productos` sin token | — | **200** (catálogo público) |
+| `POST /api/productos` sin token | — | **401** Debes iniciar sesión |
+| `POST /api/productos` con token de cliente | cliente@gmail.com / cliente1 | **403** No tienes permisos |
+| `POST /api/productos` con token de admin | mathias@duoc.cl / admin123 | **201** Creado |
+| `GET /api/auth/me` con un token alterado | — | **401** Token JWT inválido o expirado |
+
+Pasos: ejecutar `POST /api/auth/login`, copiar el `token`, presionar **Authorize**, pegarlo y probar el endpoint.
+
+
+## Despliegue realizado
+
+| Recurso | Valor |
+|---|---|
+| Instancia | AWS EC2 `promaco-db` · Amazon Linux 2023 · t3.micro · us-east-1 |
+| IP elástica (fija) | `98.89.130.7` |
+| API | http://98.89.130.7:8080/api |
+| Swagger | http://98.89.130.7:8080/swagger-ui/index.html |
+| Base de datos | PostgreSQL 15 en la misma instancia (`promaco_db`, acceso solo local) |
+| Puertos abiertos | 22 (SSH), 8080 (API), 80 (HTTP) |
+
+Levantar la API después de reiniciar el laboratorio:
+
+    cd Promaco-SPA-Backend
+    export DB_URL=jdbc:postgresql://localhost:5432/promaco_db
+    nohup java -jar target/promaco-backend-1.0.0.jar > api.log 2>&1 &
+
 
 ## Equipo
 
