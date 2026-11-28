@@ -15,11 +15,15 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
 @RestController
+// CORS: orígenes que pueden llamar a este controller (frontend en Vite y en EC2).
+// Se leen de app.cors.origins → variable CORS_ORIGINS. Para cambiar la IP, se cambia esa variable.
+@CrossOrigin(origins = "${app.cors.origins}")
 @RequestMapping("/api/productos")
 @Tag(name = "Productos", description = "CRUD de productos (ver: público; crear/editar/eliminar: ADMIN)")
 public class ProductoController {
